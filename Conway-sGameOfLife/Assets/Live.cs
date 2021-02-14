@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,8 @@ using UnityEngine.Tilemaps;
 public class Live : MonoBehaviour
 {
     [SerializeField] private Tile _life;
+    [SerializeField] private Tile _frame;
+    [SerializeField] private Tile _justDrawn;
     [SerializeField] private Tilemap _render;
 
     private static int sizeHorizontal = 100;
@@ -17,10 +19,25 @@ public class Live : MonoBehaviour
 
     public float UpdateSpeed = 0.3f;
     private readonly float defaultSpeed = 0.3f;
+
+    private bool isPlay = true;
     private void Awake()
     {
         Seed();
         InvokeRepeating(nameof(Tick), 0, UpdateSpeed);
+    }
+    private void Start()
+    {
+        for (int x = -1; x <= sizeHorizontal; x++)
+        {
+            _render.SetTile(new Vector3Int(x, -1, 0), _frame);
+            _render.SetTile(new Vector3Int(x, sizeHorizontal+1, 0), _frame);
+        }
+        for (int x = -1; x <= sizeVertical; x++)
+        {
+            _render.SetTile(new Vector3Int(-1, x, 0), _frame);
+            _render.SetTile(new Vector3Int(sizeVertical + 1, x, 0), _frame);
+        }
     }
     private void Update()
     {
@@ -88,17 +105,27 @@ public class Live : MonoBehaviour
     {
         Vector2 pos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Cell.Live.Tile = _life;
-        _cells[(int)Math.Round(pos.x, 0), (int)Math.Round(pos.y, 0)] = Cell.Live;
-        print($"x = {(int)Math.Round(pos.x, 0)}, y = {(int)Math.Round(pos.y, 0)}");
+        int x = (int)Math.Round(pos.x, 0);
+        int y = (int)Math.Round(pos.y, 0);
+        _cells[x, y] = Cell.Live;
+        _render.SetTile(new Vector3Int(x, y, 0), _justDrawn);
     }
 
     public void Pause()
     {
-        UpdateSpeed = 0f;
+        if (isPlay)
+        {
+            CancelInvoke(nameof(Tick));
+            isPlay = false;
+        }
     }
     public void Continue()
     {
-        UpdateSpeed = defaultSpeed;
+        if (!isPlay)
+        {
+            InvokeRepeating(nameof(Tick), 0, UpdateSpeed);
+            isPlay = true;
+        }
     }
 
 }
@@ -145,7 +172,6 @@ class Cell
             parents[x - 1, y - 1] += _influence;
             parents[x + 1, y - 1] += _influence;
             parents[x - 1, y + 1] += _influence;
-
             parents[x + 1, y] += _influence;
             parents[x, y + 1] += _influence;
             parents[x - 1, y] += _influence;
